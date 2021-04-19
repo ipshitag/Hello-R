@@ -1,0 +1,205 @@
+# Age Period Cohort analysis in R
+
+Getting Data
+
+```{r}
+currentDataset <- read_csv("https://statsnotebook.io/blog/data_management/example_data/APC_cannabis.csv")
+```
+
+At level 1, we have
+
+$logit P(cannabis_{ijk}) = b_0{jk}+b_1Age_{ijk}+b_2Age_{ijk}+b_3Female_{ijk}+b_4Inner regional_{ijk}+b_5Remote area_{ijk}+b_6High School_{ijk}$
+
+where Female, Inner regional, Remote area and High School are indicator variables (i.e. High School = 0 for participants who haven’t finished high school and High School = 1 for participants who finished high school). 
+R will automatically create these indicator variables when a categorical/factor variable is entered into a model. The quadratic term of age is included to capture the potential quadratic effect of age.
+
+At level 2, we have
+
+$b_0{jk} = γ_0+ u0_j + v0_k$
+
+where $u0_j$ and $v0_k$ represents the effect of being in period j and birth cohort k, and $u0_j ~ N(0, τu)$ and $v0_j ~ N(0, τv)$. The $u0_j$ and $v0_k$ have also been referred to as the random effect of period and cohort. It should be noted that the index ijk is the index for individual i in period j and cohort k.
+
+
+```{r}
+#Converting Sex, HighSchool, Year, cohort_cat and remoteness into factor variable
+currentDataset$Sex <- factor(currentDataset$Sex, exclude = c("", NA))
+currentDataset$HighSchool <- factor(currentDataset$HighSchool, exclude = c("", NA))
+currentDataset$Year <- factor(currentDataset$Year, exclude = c("", NA))
+currentDataset$cohort_cat <- factor(currentDataset$cohort_cat, exclude = c("", NA))
+currentDataset$remoteness <- factor(currentDataset$remoteness, exclude = c("", NA))
+
+#centre age at 20 years old and create the quadratic term
+currentDataset$AgeR = currentDataset$AgeR - 2
+currentDataset$AgeR2 = currentDataset$AgeR^2
+
+```
+
+
+```{r}
+install.packages('lme4')
+```
+
+
+```{r}
+library(lme4)
+
+res <- glmer(weekly_cannabis ~ AgeR + AgeR2 + Sex + remoteness + HighSchool + (1 | cohort_cat) + (1 | Year),
+  family = binomial,
+  data = currentDataset)
+summary(res)
+confint(res, level = 0.95, method = "Wald")
+
+```
+```{r}
+se <- sqrt(diag(vcov(res)))
+z <- -qnorm((1-0.95)/2)
+exp(cbind(Est=fixef(res),
+  "2.5%"  = fixef(res) - z*se,
+  "97.5%" = fixef(res) + z*se))
+
+```
+
+As expected, age is strongly associated with reduced odds of using cannabis weekly. The quadratic term of age is not statistically significant and is very close to zero.
+
+In the presence of the quadratic term of age and other variables in the model, to better understand the effect of age on cannabis use, we can use the **emmeans** package to calculate the probability of weekly cannabis use with the following codes.
+
+```{r}
+library(emmeans)
+```
+
+
+```{r}
+
+Age_eff = data.frame()
+
+# Age is centred at 20 years old, and is divided by 10.
+# (i.e. 0 means the participant is 20 years old, 1 means 30 years old, etc)
+# We use a for loop to calculate the probability of weekly cannabis use 
+# when the age "score" is between 0 and 5, with 0.5 increment.
+# The calculated probability is stored in a new data frame Age_eff
+
+for (i in 0:10) {
+  emm <- emmeans(res,  ~ AgeR + AgeR2,
+  at = list(
+  AgeR = i/2, AgeR2 = (i/2)^2), type = "response", level = 0.95)
+  Age_eff = rbind(data.frame(summary(emm)), Age_eff)
+}
+
+```
+
+The above codes prodce the following output. This can be considered as the “average” probability averaging across other variables. 
+
+Note that a score of “0” for age represents 20 years old and a score of “5” represents 70 years old. The column prob is the estimated probability of weekly cannabis use averaged across levels of sex, remoteness, and high school completion
+
+```{r}
+head(Age_eff)
+```
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+#We transformed back the x axis from "age score" into actual age by adding 2 and then multiplying by 10.
+plot <- ggplot(Age_eff, aes(x = ((AgeR+2)*10), y = prob)) +
+    geom_point() + 
+    geom_line() +
+    geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL), width = 1) +
+    xlab("Age") +
+    ylab("Probability of weeky cannabis use")
+    
+plot
+```
+```{r}
+res_cohort_period <- res
+```
+
+```{r}
+res <- glm(weekly_cannabis ~ AgeR + AgeR2 + Sex + remoteness + HighSchool,
+  family = binomial,
+  data = currentDataset)
+summary(res)
+confint(res, level = 0.95, method = "Wald")
+
+```
+
+# Testing Cohort effect
+
+```{r}
+anova(res_cohort_period, res)
+```
+
+# Testing period effect
+
+```{r}
+res <- glmer(weekly_cannabis ~ AgeR + AgeR2 + Sex + remoteness + HighSchool + (1 | cohort_cat),
+  family = binomial,
+  data = currentDataset)
+summary(res)
+confint(res, level = 0.95, method = "Wald")
+
+res_cohort <- res
+
+anova(res_cohort_period, res_cohort)
+
+```
+
+
+# Visualising Cohort effect
+
+```{r}
+#Extract the random effect
+u0 <- ranef(res_cohort_period, condVar = TRUE)
+names(u0$Year) <- "est"
+names(u0$cohort_cat) <- "est"
+
+#Extract the standard error
+period_eff <- data.frame(est = u0$Year, se = sqrt(attr(u0[[1]], "postVar")[1, ,]),
+  period = c(2001, 2004, 2007, 2010, 2013, 2016, 2019))
+cohort_eff <- data.frame(est = u0$cohort_cat, se = sqrt(attr(u0[[2]], "postVar")[1, ,]),
+  cohort = c("1941/50","1951/60","1961/70","1971/80","1981/90","1991/2000"))
+
+period_eff$upper <- period_eff$est + 1.96*period_eff$se
+period_eff$lower <- period_eff$est - 1.96*period_eff$se
+cohort_eff$upper <- cohort_eff$est + 1.96*cohort_eff$se
+cohort_eff$lower <- cohort_eff$est - 1.96*cohort_eff$se
+
+#Visualise the period and cohort effect using ggplot2
+plot <- ggplot(period_eff, aes(x = period, y = est)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .2) + 
+  xlab("Year") + 
+  ylab("Conditional log odds of the period effect")
+
+plot
+
+plot <- ggplot(cohort_eff, aes(x = cohort, y = est)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .2) + 
+  xlab("Year") + 
+  ylab("Conditional log odds of the cohort effect")
+
+plot
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
