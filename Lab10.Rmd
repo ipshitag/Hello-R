@@ -1,0 +1,197 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+# Lab 10
+# 06th April 2021
+
+Loading the Dataset
+
+```{r}
+setwd("C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab") 
+df <- read.csv('Admission_Predict.csv')
+```
+
+
+Looking at the dataset
+```{r}
+head(df)
+```
+
+Descriptive statistical summary
+```{r}
+summary(df)
+```
+
+Structure of the dataframe
+```{r}
+#structure
+str(df)
+```
+We can see that some of the variables are factors and some are numericals
+
+
+Looking for missing values
+```{r}
+#null
+any(is.na(df))
+```
+We dont have any missing values
+
+
+## Plotting
+
+For Research
+```{r}
+library(ggplot2)
+ggplot(df,aes(Research))+
+        geom_bar(aes(fill=factor(Research)),alpha=0.5)
+```
+We can see that the more people have researches but the difference is not wide.
+
+
+```{r}
+ggplot(df,aes(University.Rating))+
+        geom_bar(aes(fill=factor(University.Rating)),alpha=0.5)
+```
+Most of the University are medium ranked, the distribution is slightly skewed
+
+
+
+```{r}
+ggplot(df,aes(GRE.Score))+geom_histogram(fill='blue', bins = 20,alpha=0.5)
+```
+The GRE scores dont seem to have a pattern
+
+
+```{r}
+ggplot(df,aes(TOEFL.Score))+geom_histogram(fill='blue', bins = 20,alpha=0.5)
+```
+The TOEFL score is somewhat similar to the GRE Score, with not visible pattern as such.
+
+
+```{r}
+ggplot(df,aes(CGPA))+geom_histogram(fill='blue', bins = 20,alpha=0.5)
+
+```
+The CGPA has no visible patterns
+
+```{r}
+ggplot(df,aes(SOP))+geom_histogram( bins = 20,alpha=0.5)
+```
+SOP follows a normal distribution with slight skew
+
+
+```{r}
+ggplot(df,aes(LOR))+geom_histogram( bins = 20,alpha=0.5)
+```
+
+
+
+```{r}
+plot(df$Chance.of.Admit,xlab = 'Index', ylab = 'Chance of admission')
+```
+We can see that the Chance of Admit follows no such patters, hence we will create another column named Status. Status will have have the the value 0 if the probability of admission is less than 70% and 1 otherwise.
+
+```{r}
+library(dplyr)
+```
+```{r}
+df <- df %>%
+  mutate(Status = case_when(
+    Chance.of.Admit>0.7 ~ 1,
+    Chance.of.Admit<=0.7 ~ 0
+    ))
+```
+
+```{r}
+plot(df$Status, xlab = 'Index',ylab = 'Status 1/0')
+```
+This data can be fit into logistic model
+
+```{r}
+cor(df)
+```
+From the correlation table, choosing the important and highest correlated values. Chance of Admit is highly collinear with other values and status in itself is a representation of Chance of Admit, hence it will not be added
+
+
+```{r}
+glm.fit=glm(Status∼GRE.Score +  TOEFL.Score + University.Rating + SOP + LOR + CGPA +Research,
+        data=df ,
+        family=binomial )
+
+summary (glm.fit)
+```
+
+
+```{r}
+#predictions
+glm.probs=predict (glm.fit ,type="response")
+glm.probs [1:10]
+```
+```{r}
+glm.pred=rep(0 ,400)
+
+glm.pred[glm.probs >.7]= 1
+```
+In order to understand the result in the basis of 0 and 1, we need to convert the probabilities accordingly. Hence the values with more than 0.7 are marked 1 and those with less that 0.7 are marked 0
+
+
+
+CONFUSION MATRIX
+```{r}
+table(glm.pred ,df$Status)
+```
+Hence our model correctly predicted that the admission will be done 180 times and that it would not be on 154 times. 
+For a total of 154+180 = 334 correct predictions.
+
+The mean() function can be used to compute the fraction of times for which the prediction was correct. In this case, logistic regression
+correctly predicted the movement of the market 83.5 % of the time.
+
+```{r}
+mean(glm.pred==df$Status)
+```
+Sensitivity = TP / (TP + FN)
+1 - Specificy = TN / (TN + FP)
+
+```{r}
+Sensitivity = 180/(180 + 55)
+Specificity = 1 - (154/(154+11))
+
+cat("Sensitivity is", Sensitivity, "and Specificity is", Specificity,"\n")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
