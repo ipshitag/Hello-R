@@ -1,0 +1,222 @@
+---
+output:
+  html_notebook: default
+  html_document: default
+---
+# Decision Tree in R
+
+Library for data wrangling
+```{r}
+library(dplyr)
+```
+
+Library for decision tree
+```{r}
+library(rpart)
+library(rpart.plot)
+```
+
+Library for plotting
+```{r}
+library(ggplot2)
+```
+
+
+Importing the data
+```{r}
+data = read.csv('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\adult.csv')
+```
+
+Looking at the data
+```{r}
+head(data)
+```
+
+Statistical summary
+
+```{r}
+summary(data)
+```
+
+Structure of the data
+```{r}
+str(data)
+```
+
+Checking for Nulls
+```{r}
+any(is.na(data))
+```
+
+Converting to factors:
+```{r}
+data$workclass <- factor(data$workclass, exclude = c("", NA))
+
+data$education <- factor(data$education, exclude = c("", NA))
+
+data$education.num <- factor(data$education.num, exclude = c("", NA))
+
+data$marital.status <- factor(data$marital.status, exclude = c("", NA))
+
+data$occupation <- factor(data$occupation, exclude = c("", NA))
+
+data$relationship <- factor(data$relationship, exclude = c("", NA))
+
+data$race <- factor(data$race, exclude = c("", NA))
+
+data$sex <- factor(data$sex, exclude = c("", NA))
+
+data$income <- factor(data$income, exclude = c("", NA))
+
+data$hours.per.week <- factor(data$hours.per.week, exclude = c("", NA))
+
+data$native.country <- factor(data$native.country, exclude = c("", NA))
+```
+
+
+
+Looking at structure again
+```{r}
+str(data)
+```
+
+Dropping unwanted columns
+```{r}
+# Drop variables
+df <- data %>% select(-c(fnlwgt, capital.gain))
+```
+
+
+```{r}
+glimpse(df)
+```
+
+
+```{r}
+head(df)
+```
+
+Plotting Education
+
+```{r}
+ggplot(df,aes(education))+
+        geom_bar(aes(fill=factor(education)),alpha=0.5)
+```
+We can see that most of them are high school graduates
+
+
+Plotting Marital status
+```{r}
+ggplot(df,aes(marital.status))+
+        geom_bar(aes(fill=factor(marital.status)),alpha=0.5)
+```
+
+Plotting Occupation
+```{r}
+ggplot(df,aes(occupation))+
+        geom_bar(aes(fill=factor(occupation)),alpha=0.5)
+```
+
+Plotting Race
+```{r}
+ggplot(df,aes(race))+
+        geom_bar(aes(fill=factor(race)),alpha=0.5)
+```
+The data is clearly unbalanced and biased
+
+
+Plotting sex
+
+```{r}
+ggplot(df,aes(sex))+
+        geom_bar(aes(fill=factor(sex)),alpha=0.5)
+```
+Again we can see that the classes are imbalanced
+
+
+Plotting income
+```{r}
+ggplot(df,aes(income))+
+        geom_bar(aes(fill=factor(income)),alpha=0.5)
+```
+The target class is highly imbalanced
+
+
+## Modelling
+
+Create test and train
+
+```{r}
+create_train_test <- function(data, size = 0.8, train = TRUE)
+{
+  #' create_train_test(df, size = 0.8, train = TRUE)
+  #' arguments:
+  #' @param df: Dataset used to train the model.
+  #' @param size: Size of the split. By default, 0.8. Numerical value
+  #' @param train: If set to `TRUE`, the function creates the train set, otherwise the test set. Default value sets to `TRUE`. Boolean value.You      need to add a Boolean parameter because R does not allow to return two data frames simultaneously.
+  
+  #' @return test/train data
+  
+  
+    n_row = nrow(data)
+    total_row = size * n_row
+    train_sample <- 1: total_row
+    if (train == TRUE) {
+        return (data[train_sample, ])
+    } else {
+        return (data[-train_sample, ])
+    }
+}
+```
+
+Getting data
+```{r}
+data_train <- create_train_test(df, 0.8, train = TRUE)
+data_test <- create_train_test(df, 0.8, train = FALSE)
+dim(data_train)
+```
+
+Seeing propotion of data
+```{r}
+prop.table(table(data_train$income))
+```
+```{r}
+prop.table(table(data_test$income))
+```
+
+fITTING
+```{r}
+fit <- rpart(income~., data = data_train, method = 'class')
+rpart.plot(fit, extra = 106)
+```
+
+```{r}
+predict_unseen <-predict(fit, data_test, type = 'class')
+```
+
+```{r}
+table_mat <- table(data_test$income, predict_unseen)
+table_mat
+```
+
+Evaluations
+```{r}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+print(paste('Accuracy for test', accuracy_Test))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
