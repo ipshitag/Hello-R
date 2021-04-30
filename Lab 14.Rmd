@@ -1,0 +1,288 @@
+---
+Title: "Decision Tree in R (Forest Fire)"
+Author: Ipshita Ghosh 20122006
+---
+
+# Load Data
+
+Loading the data
+```{r}
+df = read.csv('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\forestfires.csv')
+```
+
+
+#Statistical Summary
+
+Looking at the data
+```{r}
+head(df)
+```
+
+## Statistical summary of the data
+```{r}
+summary(df)
+```
+
+## Structure of the dataframe
+
+```{r}
+str(df)
+```
+We can see that some values are factors and are termed as chr or num, we will change them after further investigation
+
+# Missing Values
+```{r}
+any(is.na(df))
+```
+We dont have any missing values
+
+
+#Plotting
+
+Library for plotting
+```{r}
+library(ggplot2)
+```
+
+##Plotting X
+
+```{r}
+ggplot(df,aes(X))+
+        geom_bar(aes(fill=factor(X)),alpha=0.5)
+```
+Since X is a factor variable, we will change X to factor
+
+```{r}
+df$X = as.factor(df$X)
+```
+
+##Plotting Y
+
+```{r}
+ggplot(df,aes(Y))+
+        geom_bar(aes(fill=factor(Y)),alpha=0.5)
+```
+```{r}
+df$Y = as.factor(df$Y)
+```
+
+## Plotting Month
+
+```{r}
+ggplot(df,aes(month))+
+        geom_bar(aes(fill=factor(month)),alpha=0.5)
+```
+
+```{r}
+df$month = as.factor(df$month)
+```
+
+## Plotting Day
+
+```{r}
+ggplot(df,aes(day))+
+        geom_bar(aes(fill=factor(day)),alpha=0.5)
+```
+
+```{r}
+df$day = as.factor(df$day)
+```
+
+## Plotting FFMC
+
+```{r}
+ggplot(df, aes(FFMC)) +
+  geom_density(alpha=0.5)
+```
+
+## Plotting DMC
+
+```{r}
+ggplot(df, aes(DMC)) +
+  geom_density(alpha=0.5)
+```
+
+
+## Plotting DC
+
+```{r}
+ggplot(df, aes(DC)) +
+  geom_density(alpha=0.5)
+```
+
+## Plotting ISI
+
+```{r}
+ggplot(df, aes(ISI)) +
+  geom_density(alpha=0.5)
+```
+
+## Plotting temp
+
+```{r}
+ggplot(df, aes(temp)) +
+  geom_density(alpha=0.5)
+```
+
+
+## Plotting RH
+
+```{r}
+ggplot(df, aes(RH)) +
+  geom_density(alpha=0.5)
+```
+
+## Plotting wind
+
+```{r}
+ggplot(df, aes(wind)) +
+  geom_density(alpha=0.5)
+```
+
+## Plotting rain
+
+```{r}
+ggplot(df, aes(rain)) +
+  geom_density(alpha=0.5)
+```
+
+## Plotting area
+
+```{r}
+ggplot(df, aes(area)) +
+  geom_density(alpha=0.5)
+```
+
+# Modelling
+
+Libraries needed
+```{r}
+library(rpart)
+library(rpart.plot)
+```
+
+
+Create test and train
+The following function creates a general train test dataset, catTools can also be used.
+
+```{r}
+create_train_test <- function(data, size = 0.8, train = TRUE)
+{
+  #' create_train_test(df, size = 0.8, train = TRUE)
+  #' arguments:
+  #' @param df: Dataset used to train the model.
+  #' @param size: Size of the split. By default, 0.8. Numerical value
+  #' @param train: If set to `TRUE`, the function creates the train set, otherwise the test set. Default value sets to `TRUE`. Boolean value.You      need to add a Boolean parameter because R does not allow to return two data frames simultaneously.
+  
+  #' @return test/train data
+  
+  
+    n_row = nrow(data)
+    total_row = size * n_row
+    train_sample <- 1: total_row
+    if (train == TRUE) {
+        return (data[train_sample, ])
+    } else {
+        return (data[-train_sample, ])
+    }
+}
+```
+
+
+Getting data
+```{r}
+data_train <- create_train_test(df, 0.8, train = TRUE)
+data_test <- create_train_test(df, 0.8, train = FALSE)
+```
+
+
+fITTING the data
+```{r}
+fit <- rpart(ISI~., data = data_train, method = 'anova')
+rpart.plot(fit)
+```
+From the tree, we can understand that, FFMC, DC, DMC and X are important for the prediction of ISI. Based on the tree, we can say which data can occur with percentage value given. For FFMC less than 93, DC is checked and if FFMC is greater than 93, it is again checked against 88. This happens **because of the greedy approach taken by decision trees, which does not take into account what other parts can do, it goes with first best**.
+
+```{r}
+fit
+```
+# Evaluations
+
+```{r}
+par(mfrow=c(1,2)) 
+rsq.rpart(fit) 
+```
+
+
+```{r}
+predict_unseen <-predict(fit, data_test, method = 'anova')
+```
+
+
+```{r}
+original = data_test$ISI
+
+x=1:length(original)
+
+plot(x, original,pch=19, col="blue")
+lines(x, predict_unseen, col="red")
+legend("topleft", legend = c("y-original", "y-predicted"),
+       col = c("blue", "red"), pch = c(19,NA), lty = c(NA,1),  cex = 0.7)
+```
+From the above graph we can see the deviation from the truth in some cases is very high, which will effect our $R^2$ 
+
+```{r}
+res <- cbind(predict_unseen,data_test$ISI)
+colnames(res) <- c('predicted','ground truth')
+res <- as.data.frame(res)
+```
+
+```{r}
+res
+```
+
+
+```{r}
+sse<-sum((res$predicted-res$`ground truth`)^2) 
+sst<-sum((mean(df$ISI)-res$`ground truth`)^2) 
+r2=1-(sse/sst) 
+print(paste(sse, "is the SSE"))
+print(paste(r2, "is the R square"))
+```
+
+The overall accuracy can be seen. As seen in the graph the SSE is high, because of the deviations and that in turns effects $R^2$. From the accuracy we can say that **Overall the ISI of a variable can be explained up to** $62.49%$ **by the model. That is, given the other variables, we can correctly predict the ISI,** $62.49%$ **of the time**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
