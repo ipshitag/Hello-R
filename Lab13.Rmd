@@ -1,0 +1,247 @@
+# Decision tree in R
+
+---
+title: "Lab 13"
+author: Ipshita Ghosh 20122006
+---
+
+Library for Decision tree
+```{r}
+library(rpart)
+library(rpart.plot)
+```
+
+Library for plotting
+```{r}
+library(ggplot2)
+```
+
+Library to plot missing data
+```{r}
+library(naniar)
+```
+
+Library to tidy our dataset
+```{r}
+library(tidyr)
+```
+
+Getting the data
+```{r}
+data <- read.csv('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\accident.csv')
+```
+
+
+# EDA and Preprocessing
+
+Getting a look at the data
+```{r}
+head(data)
+```
+
+Looking at the structure of data
+```{r}
+str(data)
+```
+
+Statistical summary of data
+```{r}
+summary(data)
+```
+
+Visualising Missing data
+
+```{r}
+vis_miss(data)
+```
+
+Since the error percentage is very low, dropping the NA values
+```{r}
+df <- na.omit(data)
+```
+
+Looking at the graph again
+```{r}
+vis_miss(df)
+```
+
+Deleting unecessary columns
+
+```{r}
+df = subset(df,select= c(-id,-caseid))
+```
+
+<\hr> 
+
+Making few columns of the dataframe as factor
+
+```{r}
+df$dead <- as.factor(df$dead)
+df$airbag <- as.factor(df$airbag)
+df$seatbelt <- as.factor(df$seatbelt)
+df$frontal <- as.factor(df$frontal)
+df$sex <- as.factor(df$sex)
+df$abcat <- as.factor(df$abcat)
+df$occRole <- as.factor(df$occRole)
+df$deploy <- as.factor(df$deploy)
+df$injSeverity <- as.factor(df$injSeverity)
+```
+
+
+Looking at the structure of data frame
+
+```{r}
+str(df)
+```
+<\hr>
+
+Plotting a few Graphs
+
+```{r}
+ggplot(data,aes(dead))+
+        geom_bar(aes(fill=factor(dead)),alpha=0.5)
+```
+AIRBAG
+
+```{r}
+ggplot(df,aes(airbag))+
+        geom_bar(aes(fill=factor(airbag)),alpha=0.5)
+```
+
+SEATBELT
+
+```{r}
+ggplot(df,aes(seatbelt))+
+        geom_bar(aes(fill=factor(seatbelt)),alpha=0.5)
+```
+
+FRONTAL
+
+```{r}
+ggplot(df,aes(frontal))+
+        geom_bar(aes(fill=factor(frontal)),alpha=0.5)
+```
+
+SEX
+
+```{r}
+ggplot(df,aes(sex))+
+        geom_bar(aes(fill=factor(sex)),alpha=0.5)
+```
+
+INJURE SEVERITY
+
+```{r}
+ggplot(df,aes(injSeverity))+
+        geom_bar(aes(fill=factor(injSeverity)),alpha=0.5)
+```
+
+YEAR OF ACCIDENT
+
+```{r}
+plot(df$yearacc)
+```
+
+<\HR>
+
+# Modelling
+
+encoding our target value as 0 and 1
+
+```{r}
+to_encod = function (x)
+  {
+    if (x=='alive')
+      {1}
+  else{0}
+}
+```
+
+Making a new column y and assigning dead to it
+
+```{r}
+df$y = sapply(df$dead,to_encod)
+```
+
+Dropping the dead column
+
+```{r}
+df = subset(df,select= c(-dead))
+```
+
+<\HR>
+
+SPLITTING THE DATA
+
+```{r}
+create_train_test <- function(data, size = 0.8, train = TRUE)
+{
+  #' create_train_test(df, size = 0.8, train = TRUE)
+  #' arguments:
+  #' @param df: Dataset used to train the model.
+  #' @param size: Size of the split. By default, 0.8. Numerical value
+  #' @param train: If set to `TRUE`, the function creates the train set, otherwise the test set. Default value sets to `TRUE`. Boolean value.You      need to add a Boolean parameter because R does not allow to return two data frames simultaneously.
+  
+  #' @return test/train data
+  
+  
+    n_row = nrow(data)
+    total_row = size * n_row
+    train_sample <- 1: total_row
+    if (train == TRUE) {
+        return (data[train_sample, ])
+    } else {
+        return (data[-train_sample, ])
+    }
+}
+```
+
+```{r}
+data_train <- create_train_test(df, 0.8, train = TRUE)
+data_test <- create_train_test(df, 0.8, train = FALSE)
+```
+Dimension of the train and test
+
+```{r}
+dim(data_test)
+```
+```{r}
+dim(data_train)
+```
+
+Looking at the proportion of y in the train and test
+
+```{r}
+prop.table(table(data_test$y))
+```
+```{r}
+prop.table(table(data_train$y))
+```
+
+<\hr>
+
+Making the decision tree
+
+```{r}
+fit <- rpart(y~., data = data_train, method = 'class')
+rpart.plot(fit)
+```
+Predict on unseen dataset
+
+```{r}
+predict_unseen <-predict(fit, data_test, type = 'class')
+```
+
+Looking at true positive and negatives
+
+```{r}
+table_mat <- table(data_test$y, predict_unseen)
+table_mat
+```
+
+CHECKING ACCURACY OF THE MODEL
+
+```{r}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+print(paste('Accuracy for test', accuracy_Test))
+```
