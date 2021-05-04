@@ -1,0 +1,128 @@
+Logistic Regression
+
+```{r}
+df <- read.csv('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\accident.csv')
+```
+
+```{r}
+head(df)
+```
+```{r}
+summary(df)
+```
+
+```{r}
+str(df)
+```
+# Missing Data
+
+```{r}
+any(is.na(df))
+```
+```{r}
+#install.packages("naniar")
+library(naniar)
+vis_miss(df)
+```
+```{r}
+library(tidyr)
+df <- na.omit(df)
+```
+
+```{r}
+vis_miss(df)
+```
+```{r}
+any(is.na(df))
+```
+
+# Data PreProcessing
+
+```{r}
+df = subset(df,select= c(-id,-caseid))
+```
+
+
+```{r}
+df$dead <- as.factor(df$dead)
+df$airbag <- as.factor(df$airbag)
+df$seatbelt <- as.factor(df$seatbelt)
+df$frontal <- as.factor(df$frontal)
+df$sex <- as.factor(df$sex)
+df$abcat <- as.factor(df$abcat)
+df$occRole <- as.factor(df$occRole)
+df$deploy <- as.factor(df$deploy)
+df$injSeverity <- as.factor(df$injSeverity)
+```
+
+```{r}
+str(df)
+```
+```{r}
+to_encod = function (x)
+  {
+    if (x=='alive')
+      {1}
+  else{0}
+}
+```
+
+
+```{r}
+df$y = sapply(df$dead,to_encod)
+```
+
+
+```{r}
+library(caTools)
+set.seed(42)
+
+split = sample.split(df$weight, SplitRatio = 0.80)
+
+df.train = subset(df, split = TRUE)
+df.test = subset(df, split = FALSE)
+```
+
+
+```{r}
+str(df)
+```
+
+
+```{r}
+model = glm(y~.,data=df.train ,family=binomial(link = 'logit'))
+```
+```{r}
+model
+```
+```{r}
+fitted.probs = predict(model,newdata = df.test,type='response')
+fitted.results = ifelse(fitted.probs>0.5,1,0)
+
+misclasserror = mean(fitted.results != df.test$y, na.rm = T)
+
+print(paste('accuracy', 1-misclasserror))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
