@@ -1,0 +1,289 @@
+---
+title: "R Practical"
+author: "Ipshita Ghosh 20122006"
+---
+
+#Libraries
+```{r}
+#for plotting
+library(ggplot2)
+
+#for splitting
+library(caTools)
+
+#for decision tree
+library(rpart)
+library(rpart.plot)
+
+#timing
+library(tictoc)
+
+#ROC
+library(pROC)
+
+```
+
+#Data
+
+Loading the data
+```{r}
+df <- read.csv("C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\cia2.csv")
+```
+
+Taking a look at the dataset
+```{r}
+head(df)
+```
+
+Number of Instances: 958 (legal tic-tac-toe endgame boards)
+
+Number of Attributes: 9, each corresponding to one tic-tac-toe square
+
+Missing Attribute Values: None
+
+Class Distribution: About 65.3% are positive (i.e., wins for "x")
+
+Attribute Information
+
+V1 = top-left-square: {x,o,b}
+
+V2 = top-middle-square: {x,o,b}
+
+V3 = top-right-square: {x,o,b}
+
+V4 = middle-left-square: {x,o,b}
+
+V5 = middle-middle-square: {x,o,b}
+
+V6 = middle-right-square: {x,o,b}
+
+V7 = bottom-left-square: {x,o,b}
+
+V8 = bottom-middle-square: {x,o,b}
+
+V = bottom-right-square: {x,o,b}
+
+V10 = Class: {positive,negative}
+
+
+#Exploratory data Analysis
+
+First, lets rename the data columns accordingly, for better understanding and inference
+
+```{r}
+names(df)[1] <- "top-left-square"
+names(df)[2] <- "top-middle-square"
+names(df)[3] <- "top-right-square"
+names(df)[4] <- "middle-left-square"
+names(df)[5] <- "middle-middle-square"
+names(df)[6] <- "middle-right-square"
+names(df)[7] <- "botton-left-square"
+names(df)[8] <- "botton-middle-square"
+names(df)[9] <- "botton-right-square"
+names(df)[10] <- "class"
+```
+
+Looking at the changed dataset
+
+```{r}
+head(df)
+```
+
+From the dataset we can understand that the data requires multivariate analysis and a decision tree is best for the case as it has different scenarios according to which the class is determined as either positive or negative
+
+Let us look at the Class columns
+
+```{r}
+ggplot(df,aes(class))+
+        geom_bar(aes(fill=factor(class)),alpha=0.5)
+```
+
+
+#Data pre processing
+
+```{r}
+str(df)
+```
+
+#Modelling
+
+```{r}
+set.seed(420)
+split = sample.split(df$class, SplitRatio = 0.7)
+train = subset(df, split == TRUE)
+test = subset(df, split == FALSE)
+```
+
+
+Looking at the proporting in the train and test
+```{r}
+par(mfrow=c(1,2)) 
+
+ggplot(train, aes(class))+
+        geom_bar(aes(fill=factor(class)),alpha=0.5)
+
+ggplot(test,aes(class))+
+        geom_bar(aes(fill=factor(class)),alpha=0.5)
+
+```
+From the graphs we can see that the proportion is maintained in train and test dataset, hence we can continue with the decision tree
+
+
+```{r}
+tic("Running the decision tree: ")
+fit <- rpart(class~., data = train, method = 'class')
+toc()
+```
+
+```{r}
+rpart.plot(fit,fallen.leaves=FALSE)
+```
+
+```{r}
+#summary(fit)
+```
+
+
+```{r}
+par(mfrow=c(1,2)) 
+rsq.rpart(fit)
+```
+
+
+#Accuracy
+
+```{r}
+pred <- predict(fit, test, method = 'class')
+```
+
+
+```{r}
+pred <- as.data.frame(pred)
+
+joiner <- function(x)
+{
+  if(x>0.5)
+  {
+    return("positive")
+  }
+  else
+  {
+    return("negative")
+  }
+}
+
+```
+
+```{r}
+tic("Prediction time: ")
+pred$class <- sapply(pred$positive, joiner)
+toc()
+```
+## Confusion Matrix
+
+```{r}
+confusion_m = table(test$class, pred$class)
+```
+
+
+## Accuracy from Confusion tree
+
+```{r}
+accuracy <- sum(diag(confusion_m)) / sum(confusion_m)
+```
+
+```{r}
+ n = sum(confusion_m) # number of instances
+ nc = nrow(confusion_m) # number of classes
+ diag = diag(confusion_m) # number of correctly classified instances per class 
+ rowsums = apply(confusion_m, 1, sum) # number of instances per class
+ colsums = apply(confusion_m, 2, sum) # number of predictions per class
+ p = rowsums / n # distribution of instances over the actual classes
+ q = colsums / n # distribution of instances over the predicted classes
+```
+
+```{r}
+ precision = diag / colsums 
+ recall = diag / rowsums 
+ f1 = 2 * precision * recall / (precision + recall) 
+```
+
+## Printing Metrics
+
+```{r}
+print(confusion_m)
+```
+
+```{r}
+print(paste(accuracy, "is the accuracy"))
+print(paste(precision, "is the precision"))
+print(paste(recall, "is the recall"))
+print(paste(f1, "is the f1"))
+```
+
+
+# Inference
+
+## **Basic Introduction**
+
+For the model building, the dataset is first randomly split into two parts, one is for testing and one for training the data. Using the rpart, a large classification tree is built, which tries to predict the class of the win. 
+
+A decision, as we know, is represented upside down, which means that the first node in the tree which is $middle-middle-square$ is the root node and the most important. The nodes in the middle , i.e. nodes like $top-left-square$ are internal nodes and lastly the end of branches are the edges, in our case that is the class of the row.
+
+## **Decision tree of our data: **
+
+From the plot we can see that the most important decision maker for predicting the class is, $middle-middle-square$, followed by $top-right-square$ and $top-left-square$. The feature importance tells us how much a feature helped to improve the purity of all nodes. Here, the average of the classes was used, since predicting whether the game is a win or not is a classification task with two class.
+
+To understand which features are important, $Gini-index$ is used, which means that the attributes with more gini index, makes it more important. In case of regression tree it is done using **information gain**. 
+
+The Gini index is given as follows:
+
+$\sum \hat{p}_{mk}(1-\hat{p}_{mk})$
+
+The sum goes from $1$ to $K$, where $K$ is the number of classes, hence in our case, it will go from 1 to 2. And $\hat{p}_{mk}$ represents the proportion of training observations in the $m^{th}$ region that are from the $k^{th}$ class.
+
+## **Problem of Overfitting**
+
+Since Decision trees are totally data dependant, and top down greedy, the problem of overfitting is the most problematic. The rpart library comes handy in this, as it can be used to prune the tree given a $\alpha$. In our case, we *did not face the problem of overfitting* hence pruning was not needed in our case
+
+## **Evaluation**
+
+The different evaluations that were done
+
+1. accuracy -> $94.09%$  | This means that the decision tree has correctly predicted the class on the test data 94.09% of the time
+2. precision -> $92.78%$ | The model gave correct predictions for a certain class for 92% of the time of 0.92 fraction of the time
+3. recall -> $0.9$       | This is the fraction of instances of a class that were correctly predicted, that is 0.9
+4. f1 -> $0.9137$        | This is the harmonic mean of precision and recall, and commonly reported and ranges from 0 to 9. Our f1, 9 means high                                   performance
+
+## **Optimization**
+
+Using the library of tictoc, we have seen that the running time of the decision tree is 0.03 seconds and that of predicting is 0.01 seconds. As we know that decision trees are greedy in nature and do not see what the next best can be. In the best case of a balanced tree the depth would be in  $O(log\ n)$, but as said above, optimal splits are not seen in decision trees and hence, worst case scenario is $O(N)$
+
+Hence we can say that the time complexity for decision trees is in $O(N\ kd)$
+
+Where, 
+$N$  = number of training examples 
+
+$k$ = number of features
+
+$d$ = depth of the decision tree.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
