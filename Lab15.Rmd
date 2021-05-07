@@ -1,0 +1,380 @@
+---
+title: "Decision Tree vs Random Forest"
+author: "Ipshita Ghosh 20122006"
+---
+
+# Decision Tree vs Random Forest in R
+
+```{r}
+# Disable warning messages globally
+options(warn = - 1)   
+```
+
+Library for data wrangling
+```{r}
+library(dplyr)
+```
+
+Library for timing
+```{r}
+library(tictoc)
+```
+
+Library for decision tree
+```{r}
+library(rpart)
+library(rpart.plot)
+```
+
+Library for random forest
+```{r}
+library(randomForest)
+```
+
+
+Library for plotting
+```{r}
+library(ggplot2)
+```
+
+
+Importing the data
+```{r}
+data = read.csv('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\adult.csv')
+```
+
+Looking at the data
+```{r}
+head(data)
+```
+
+Statistical summary
+
+```{r}
+summary(data)
+```
+
+
+Structure of the data
+```{r}
+str(data)
+```
+
+Checking for Nulls
+```{r}
+any(is.na(data))
+```
+
+Converting to factors:
+```{r}
+data$workclass <- factor(data$workclass, exclude = c("", NA))
+
+data$education <- factor(data$education, exclude = c("", NA))
+
+data$education.num <- factor(data$education.num, exclude = c("", NA))
+
+data$marital.status <- factor(data$marital.status, exclude = c("", NA))
+
+data$occupation <- factor(data$occupation, exclude = c("", NA))
+
+data$relationship <- factor(data$relationship, exclude = c("", NA))
+
+data$race <- factor(data$race, exclude = c("", NA))
+
+data$sex <- factor(data$sex, exclude = c("", NA))
+
+data$income <- factor(data$income, exclude = c("", NA))
+
+data$native.country <- factor(data$native.country, exclude = c("", NA))
+```
+
+Looking at structure again
+```{r}
+str(data)
+```
+
+Dropping unwanted columns
+```{r}
+# Drop variables
+df <- data %>% select(-c(fnlwgt, capital.gain))
+```
+
+
+```{r}
+glimpse(df)
+```
+
+## Plotting Education
+
+```{r}
+ggplot(df,aes(education))+
+        geom_bar(aes(fill=factor(education)),alpha=0.5)
+```
+
+We can see that most of them are high school graduates
+
+
+## Plotting Marital status
+```{r}
+ggplot(df,aes(marital.status))+
+        geom_bar(aes(fill=factor(marital.status)),alpha=0.5)
+```
+
+## Plotting Occupation
+```{r}
+ggplot(df,aes(occupation))+
+        geom_bar(aes(fill=factor(occupation)),alpha=0.5)
+```
+
+## Plotting Race
+```{r}
+ggplot(df,aes(race))+
+        geom_bar(aes(fill=factor(race)),alpha=0.5)
+```
+
+The data is clearly unbalanced and biased
+
+
+## Plotting sex
+
+```{r}
+ggplot(df,aes(sex))+
+        geom_bar(aes(fill=factor(sex)),alpha=0.5)
+```
+
+Again we can see that the classes are imbalanced
+
+
+Plotting income
+```{r}
+ggplot(df,aes(income))+
+        geom_bar(aes(fill=factor(income)),alpha=0.5)
+```
+
+The target class is highly imbalanced
+
+
+# Data pre process for Modelling
+
+## Create test and train
+
+```{r}
+create_train_test <- function(data, size = 0.8, train = TRUE)
+{
+  #' create_train_test(df, size = 0.8, train = TRUE)
+  #' arguments:
+  #' @param df: Dataset used to train the model.
+  #' @param size: Size of the split. By default, 0.8. Numerical value
+  #' @param train: If set to `TRUE`, the function creates the train set, otherwise the test set. Default value sets to `TRUE`. Boolean value.You      need to add a Boolean parameter because R does not allow to return two data frames simultaneously.
+  
+  #' @return test/train data
+  
+  
+    n_row = nrow(data)
+    total_row = size * n_row
+    train_sample <- 1: total_row
+    if (train == TRUE) {
+        return (data[train_sample, ])
+    } else {
+        return (data[-train_sample, ])
+    }
+}
+```
+
+
+
+##Getting data
+```{r}
+data_train <- create_train_test(df, 0.8, train = TRUE)
+data_test <- create_train_test(df, 0.8, train = FALSE)
+dim(data_train)
+```
+
+
+
+## Seeing propotion of data
+```{r}
+prop.table(table(data_train$income))
+```
+
+```{r}
+prop.table(table(data_test$income))
+```
+
+# Decision Tree
+
+```{r}
+tic("Running the decision tree: ")
+fit_dt <- rpart(income~., data = data_train, method = 'class')
+toc()
+```
+Plotting the tree,
+```{r}
+rpart.plot(fit_dt, extra = 106)
+```
+
+
+```{r}
+predict_unseen <-predict(fit_dt, data_test, type = 'class')
+```
+
+```{r}
+table_mat <- table(data_test$income, predict_unseen)
+table_mat
+```
+
+## Evaluations on Decision tree
+
+```{r}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+```
+
+```{r}
+ n = sum(table_mat) # number of instances
+ nc = nrow(table_mat) # number of classes
+ diag = diag(table_mat) # number of correctly classified instances per class 
+ rowsums = apply(table_mat, 1, sum) # number of instances per class
+ colsums = apply(table_mat, 2, sum) # number of predictions per class
+ p = rowsums / n # distribution of instances over the actual classes
+ q = colsums / n # distribution of instances over the predicted classes
+```
+
+```{r}
+ precision = diag / colsums 
+ recall = diag / rowsums 
+ f1 = 2 * precision * recall / (precision + recall) 
+```
+
+## Printing Metrics for Decision tree
+
+```{r}
+print(table_mat)
+```
+
+```{r}
+print(paste(accuracy_Test, "is the accuracy"))
+print(paste(precision, "is the precision"))
+print(paste(recall, "is the recall"))
+print(paste(f1, "is the f1"))
+```
+
+# Random Forest
+
+Making the model
+
+```{r}
+tic("Running random Forest: ")
+model_rf <- randomForest(income ~ ., data = data_train, importance = TRUE)
+toc()
+```
+
+```{r}
+predict_unseen <-predict(model_rf, data_test, type = 'class')
+```
+
+```{r}
+predict_unseen = as.data.frame(predict_unseen)
+```
+
+```{r}
+table_mat <- table(data_test$income, predict_unseen$predict_unseen)
+```
+
+## Evaluations on Random Forest
+
+```{r}
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+```
+
+```{r}
+ n = sum(table_mat) # number of instances
+ nc = nrow(table_mat) # number of classes
+ diag = diag(table_mat) # number of correctly classified instances per class 
+ rowsums = apply(table_mat, 1, sum) # number of instances per class
+ colsums = apply(table_mat, 2, sum) # number of predictions per class
+ p = rowsums / n # distribution of instances over the actual classes
+ q = colsums / n # distribution of instances over the predicted classes
+```
+
+```{r}
+ precision = diag / colsums 
+ recall = diag / rowsums 
+ f1 = 2 * precision * recall / (precision + recall) 
+```
+
+
+```{r}
+print(table_mat)
+```
+
+```{r}
+print(paste(accuracy_Test, "is the accuracy"))
+print(paste(precision, "is the precision"))
+print(paste(recall, "is the recall"))
+print(paste(f1, "is the f1"))
+```
+
+# INFERENCE:
+
+First, let us see the score of random forest and decision tree
+
+The different evaluations that were done
+
+**Decision Tree** :
+
+1. accuracy  -> $85.03%$        | This means that the decision tree has correctly predicted the class on the test data 94.09% of the time
+2. precision -> $89.45%$        | The model gave correct predictions for a class 1, the model predicted correctly
+3. precision -> $62.81%$        | The model gave correct predictions for a class 2, the model predicted correctly
+4. recall    -> $0.9$           | This is the fraction of instances of a class 1 that were correctly predicted, that is 0.9
+5. recall    -> $0.5$           | This is the fraction of instances of a class 2 that were correctly predicted, that is 0.9
+6. f1        -> $90.88%$        | This is the harmonic mean of precision and recall, for class 1
+7. f1        -> $58.21%$        | This is the harmonic mean of precision and recall, for class 2
+8. time      -> $0.98s$
+ 
+**Random Forest** :
+
+1. accuracy  -> $85.47%$        | This means that the decision tree has correctly predicted the class on the test data 94.09% of the time
+2. precision -> $90.60%$        | The model gave correct predictions for a class 1, the model predicted correctly
+3. precision -> $62.77%$        | The model gave correct predictions for a class 2, the model predicted correctly
+4. recall    -> $0.9$           | This is the fraction of instances of a class 1 that were correctly predicted, that is 0.9
+5. recall    -> $0.6$           | This is the fraction of instances of a class 2 that were correctly predicted, that is 0.9
+6. f1        -> $91.05%$        | This is the harmonic mean of precision and recall, for class 1
+7. f1        -> $61.39%$        | This is the harmonic mean of precision and recall, for class 2
+8. time      -> $88.98s$
+
+Since we can see that we did not get any dramatic change while using random forest and the difference in time in huge. We can use random forest when we are suffering with overfitting.
+In this case, random forest did slightly better than decision tree.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
