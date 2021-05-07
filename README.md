@@ -19,3 +19,4 @@ The different R programs in the repository are as follows:-
 | **Decision tree** for classification in *accident* dataset | [Lab 13](https://github.com/ipshitag/Hello-R/blob/master/Lab13.Rmd) |
 | **Decision tree** for regression in *forest fire* dataset | [Lab 14](https://github.com/ipshitag/Hello-R/blob/master/Lab%2014.Rmd) |
 | **Decision tree** for classification on *tic-tac-toe endgame* dataset | [CIA 2](https://github.com/ipshitag/Hello-R/blob/master/CIA_2.Rmd) |
+| **Decision tree** and **Random forest** for classification on *adlut* dataset | [Lab 15](https://github.com/ipshitag/Hello-R/blob/master/Lab15.Rmd) |
