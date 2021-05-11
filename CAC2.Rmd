@@ -1,0 +1,472 @@
+---
+title: "R CAC2"
+author: "Ipshita Ghosh 20122006"
+---
+
+# Libraries
+
+```{r}
+#for plotting
+library(ggplot2)
+
+#for splitting
+library(caTools)
+
+#for decision tree
+library(rpart)
+library(rpart.plot)
+
+#timing
+library(tictoc)
+
+#ROC
+library(pROC)
+
+#splitting
+library(caTools)
+
+#random forest
+library(randomForest)
+
+#logistic regression
+library(nnet)
+
+```
+
+# Data
+
+```{r}
+df <- read.csv("C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\car_evaluation.csv")
+```
+
+```{r}
+head(df)
+```
+
+Missing Values
+
+```{r}
+any(is.na(df))
+```
+There are no missing values in the dataframe
+
+
+Structure of the dataframe
+
+```{r}
+str(df)
+```
+
+# Data Preprocessing
+
+Changing the characters data to fctors
+```{r}
+df$buying.price <-  as.factor(df$buying.price)
+df$maintenance.cost <- as.factor(df$maintenance.cost)
+df$number.of.doors <- as.factor(df$number.of.doors)
+df$number.of.persons <- as.factor(df$number.of.persons)
+df$lug_boot <- as.factor(df$lug_boot)
+df$safety <- as.factor(df$safety)
+df$decision <- as.factor(df$decision)
+```
+
+
+# Visualizations
+
+```{r}
+ggplot(df,aes(buying.price))+
+        geom_bar(aes(fill=factor(buying.price)),alpha=0.8)
+```
+
+```{r}
+ggplot(df,aes(maintenance.cost))+
+        geom_bar(aes(fill=factor(maintenance.cost)),alpha=0.8)
+```
+
+```{r}
+ggplot(df,aes(number.of.doors))+
+        geom_bar(aes(fill=factor(number.of.doors)),alpha=0.8)
+```
+
+```{r}
+ggplot(df,aes(number.of.persons))+
+        geom_bar(aes(fill=factor(number.of.persons)),alpha=0.8)
+```
+
+```{r}
+ggplot(df,aes(lug_boot))+
+        geom_bar(aes(fill=factor(lug_boot)),alpha=0.8)
+```
+
+```{r}
+ggplot(df,aes(safety))+
+        geom_bar(aes(fill=factor(safety)),alpha=0.8)
+```
+
+```{r}
+ggplot(df,aes(decision))+
+        geom_bar(aes(fill=factor(decision)),alpha=0.8)
+```
+
+The data is very symmetrically distributed along all classes, but on the decision class. This can be dealt with correct proportioning of data.
+
+
+In the following place we will try to apply algorithms to prediction the **decision**
+
+# Modelling
+
+## Splitting
+
+```{r}
+set.seed(420)
+
+split = sample.split(df$decision, SplitRatio = 0.80)
+
+df.train = subset(df, split = TRUE)
+df.test = subset(df, split = FALSE)
+```
+
+
+## Proportion of data
+
+Looking at the proportion of data
+
+```{r}
+prop.table(table(df.train$decision))
+```
+```{r}
+prop.table(table(df.test$decision))
+```
+
+## Decision Tree
+
+```{r}
+tic("Running the decision tree: ")
+fit_dr <- rpart(decision~., data = df.train, method = 'class')
+toc()
+
+rpart.plot(fit_dr,fallen.leaves=FALSE)
+
+
+```
+
+Predictions: 
+
+```{r}
+predict_dr <-predict(fit_dr, df.test, method = 'class')
+```
+
+
+Data wrangling: 
+
+```{r}
+predict_dr <- apply(predict_dr,1,which.max)
+
+predict_dr <- as.data.frame(predict_dr)
+
+joiner <- function(x)
+{
+  if(x==1)
+  {
+    return("acc")
+  }
+  else if(x==2)
+  {
+    return("good")
+  }
+  else if(x==3)
+  {
+    return("unacc")
+  }
+  else
+    return("vgood")
+}
+
+predict_dr$decision <- sapply(predict_dr$predict_dr, joiner)
+
+```
+
+
+### Metrics on Decision Tree
+
+```{r}
+#confusion matrix
+confusion_m = table(df.test$decision, predict_dr$decision)
+accuracy <- sum(diag(confusion_m)) / sum(confusion_m)
+n = sum(confusion_m) # number of instances
+nc = nrow(confusion_m) # number of classes
+diag = diag(confusion_m) # number of correctly classified instances per class 
+rowsums = apply(confusion_m, 1, sum) # number of instances per class
+colsums = apply(confusion_m, 2, sum) # number of predictions per class
+p = rowsums / n # distribution of instances over the actual classes
+q = colsums / n # distribution of instances over the predicted classes
+precision = diag / colsums 
+recall = diag / rowsums 
+f1 = 2 * precision * recall / (precision + recall)
+```
+
+
+```{r}
+print(confusion_m)
+cat(sep="\n\n")
+print(paste(accuracy, "is the accuracy"))
+cat(sep="\n\n")
+print(paste(precision, "is the precision"))
+cat(sep="\n\n")
+print(paste(recall, "is the recall"))
+cat(sep="\n\n")
+print(paste(f1, "is the f1"))
+```
+
+
+## Random Forest
+
+```{r}
+tic("Running random Forest: ")
+model_rf <- randomForest(decision ~ ., data = df.train, importance = TRUE)
+toc()
+```
+Predictions:
+
+```{r}
+predict_rf <-predict(model_rf, df.test, method = 'class')
+
+predict_rf <- as.data.frame(predict_rf)
+```
+
+
+### Metrics on Random Forest
+
+```{r}
+#confusion matrix
+confusion_m = table(df.test$decision, predict_rf$predict_rf)
+accuracy <- sum(diag(confusion_m)) / sum(confusion_m)
+n = sum(confusion_m) # number of instances
+nc = nrow(confusion_m) # number of classes
+diag = diag(confusion_m) # number of correctly classified instances per class 
+rowsums = apply(confusion_m, 1, sum) # number of instances per class
+colsums = apply(confusion_m, 2, sum) # number of predictions per class
+p = rowsums / n # distribution of instances over the actual classes
+q = colsums / n # distribution of instances over the predicted classes
+precision = diag / colsums 
+recall = diag / rowsums 
+f1 = 2 * precision * recall / (precision + recall)
+```
+
+
+```{r}
+print(confusion_m)
+cat(sep="\n\n")
+print(paste(accuracy, "is the accuracy"))
+cat(sep="\n\n")
+print(paste(precision, "is the precision"))
+cat(sep="\n\n")
+print(paste(recall, "is the recall"))
+cat(sep="\n\n")
+print(paste(f1, "is the f1"))
+```
+## Logistic Regression
+
+```{r}
+tic("Time for logistic regression")
+fit_lr <- multinom(decision~.,data=df.train)
+toc()
+```
+```{r}
+predict_lr <-predict(fit_lr, df.test)
+predict_lr <- as.data.frame(predict_lr)
+```
+
+### Metrics on Logistic regression
+
+```{r}
+#confusion matrix
+confusion_m = table(df.test$decision, predict_lr$predict_lr)
+accuracy <- sum(diag(confusion_m)) / sum(confusion_m)
+n = sum(confusion_m) # number of instances
+nc = nrow(confusion_m) # number of classes
+diag = diag(confusion_m) # number of correctly classified instances per class 
+rowsums = apply(confusion_m, 1, sum) # number of instances per class
+colsums = apply(confusion_m, 2, sum) # number of predictions per class
+p = rowsums / n # distribution of instances over the actual classes
+q = colsums / n # distribution of instances over the predicted classes
+precision = diag / colsums 
+recall = diag / rowsums 
+f1 = 2 * precision * recall / (precision + recall)
+```
+
+
+```{r}
+print(confusion_m)
+cat(sep="\n\n")
+print(paste(accuracy, "is the accuracy"))
+cat(sep="\n\n")
+print(paste(precision, "is the precision"))
+cat(sep="\n\n")
+print(paste(recall, "is the recall"))
+cat(sep="\n\n")
+print(paste(f1, "is the f1"))
+```
+
+# Inference
+
+## Basic Introduction about the dataset
+
+The data-set consists of **7 fields** which are all specifications of cars like number of people that can be accepted, number of doors etc. Based on the 6 factors of the car, the car is designated as **acceptable, unacceptable, good or very good**. The problem statement is to predict the decision of a given car based on the other factors. 
+From the visualizations of the features, we could see that the data is equally balanced in all classes, but the target class has some imbalance in data. The imbalance in data can be solved by **stratifying** the data-set with proper balance in train and test. After splitting the data into test and train (20-80), the proportion of class was seen between **unacc,acc,good,vgood** and they were found to be of the same proportion in both train and test. 
+Since the problem is **multi-class classification**, we try to test the following models in the data-set:
+
+1. Decision tree
+
+2. Random Forest
+
+3. Logistic regression (Multinomial)
+
+## Results
+
+Looking at the results of different model:
+
+
+**Accuracy**
+
+| Decision Tree | Random Forest | Logistic Regression |
+:------------:|------------:|--------------:|
+|$94.39\%$     |$99.82\%$     | $94.56\%$
+
+
+**Precision**
+
+Class | Decision Tree | Random Forest | Logistic Regression |
+:-----|------------:|------------:|------------:|
+acc |$86.05\%$     |$99.22\%$     | $87.15\%$ |
+good |$75.00\%$     |$100\%$     | $92.19\%$ |
+unacc |$99.40\%$     |$100\%$     | $97.33\%$ |
+vgood |$81.25\%$     |$100\%$     | $91.30\%$ |
+
+
+**Recall**
+
+Class | Decision Tree | Random Forest | Logistic Regression |
+:-----|------------:|------------:|------------:|
+acc|$93.23\%$     |$100\%$     | $90.10\%$ |
+good|$86.95\%$     |$99.75\%$     | $85.50\%$ |
+unacc|$95.95\%$     |$100\%$     | $96.36\%$ |
+vgood|$80\%$     |$100\%$     | $96.92\%$ |
+
+
+**F1**
+
+Class | Decision Tree | Random Forest | Logistic Regression |
+:-----|------------:|------------:| ---------------:|
+acc|$89.50\%$     |$99.61\%$     | $88.60\%$ |
+good|$80.54\%$     |$100\%$     | $88.72\%$ |
+unacc|$97.65\%$     |$99.88\%$     | $96.84\%$ |
+vgood|$80.62\%$     |$100\%$     | $94.03\%$ |
+
+
+Let us try to look at them in greater detail:
+
+
+## Decision Tree
+
+As we know that, in classification tree the classes are predicted by calculating the maximum or most commonly occurring class *in that area*. From the plot we can see that the most important decision maker for predicting the class is, **number of persons**, followed by **safety** and **buying price of the car**. It is quite surprising to find that safety is a more important feature than buying price.
+
+The feature importance tells us how much a feature helped to improve the purity of all nodes. To understand which features are important, $Gini-index$ is used, which means that the attributes with more gini index, makes it more important. In case of regression tree it is done using **information gain**. 
+
+The Gini index is given as follows:
+
+$\sum \hat{p}_{mk}(1-\hat{p}_{mk})$
+
+The sum goes from $1$ to $K$, where $K$ is the number of classes, hence in our case, it will go from 1 to 4. And $\hat{p}_{mk}$ represents the proportion of training observations in the $m^{th}$ region that are from the $k^{th}$ class.
+
+The running time of decision tree was $0.03s$ and gave an accuracy of $94.39\%$ which is quite high.
+
+Since we did not face the face the problem of **over-fitting**, we did not have to **prune** the tree, in case of over-fitting, we need to prune the data, so that the tree does not fit as it is on the training data.
+
+
+## Random Forest
+
+Random forests are an improved version of bagging. Random forests **de-correlates** the trees which is different to bagging. In random forest, a set of $m$ predictors are chosen from the full set of $p$ predictors.In every split, only a **fresh set** of predictors $m$ is allowed. The selection of $m$ predictors from $p$ is as follows, $m\approx \sqrt{p}$. Since the majority of the predictors are not even allowed for every split, the learning slows down. 
+
+Since, random forest forces the model to choose only $m$ predictors in $p$ total predictors, hence on average a total of $(p-m)/p$ trees dont even consider the best split. Using a small value of m in building a random forest will typically be helpful when we have a large number of correlated predictors. Hence in our case the total number of trees created as $500$ and $m$ as the following
+
+``` mtry = if (!is.null(y) && !is.factor(y)) ```
+
+``` max(floor(ncol(x)/3), 1) else floor(sqrt(ncol(x))) ```
+             
+Therefore, in our case is approximately $3$. 
+
+The accuracy received from random forest is $99.82\%$ which is very high. The other metrics have also been excellent. All the metrics are $\approx 99\%-100\%$. 
+
+## Logistic Regression
+
+For applying Logistic regression on multi class problem, we have used the multinom function from ```nnet``` library. The general logistic regression model has multiple explanatory variables that can be quantitative, categorical, or both. For $p$ explanatory variables, the model for the log odds is:
+
+$logit[P(Y=1)]\ =\ \alpha+\beta_1x_1+\beta_2x_2+...+\beta_px_p$.
+
+The parameter $\beta_j$ refers to the effect of $x_j$ on the log odds that $(Y = 1)$, adjusting for the other $x’s$. For example, $exp(\beta_1)$ is the **multiplicative effect** on the odds of a 1-unit increase in $x_1$, at a fixed value for $\beta_2x_2+...+\beta_px_p$, such as when we can hold constant $x_2,...,x_p$.
+
+The **log-linear model** is a special case of logistic regression. The model coefficients are just odds ratios for that specific response. Their values are constrained so that the fitted probabilities add to $1$ across the possible multinomial response levels.
+
+Logistic regression got the accuracy of $94.56\%$ of the test data, which is quite high.
+
+## Model Metrics:
+
+From the table, we can see the metrics of different models from the dataset. 
+
+**Accuracy** of a model is how accurately the model classifies a class, hence we can say that, the best among the models in terms of accuracy is **Random Forest**, since it correct predicts a class $99.82\%$ of the time.
+
+**Precision** is the fraction of time, that the model gave correct prediction. For all the classes **Random forest** was the highest.
+
+**Recall** ia the fraction of instances of a class that were correctly predicted. For all the four cases, **Random Forest** performs the best.
+
+Hence we can say that, in terms of metrics, **Random forest** was the best model among the three.
+
+## Time:
+
+| Model | Time |
+:------------:|------------:|
+| Decision Tree | $0.03s$ |
+| Random Forest | $1.36s$ |
+| Logistic Regression | $0.45s$ |
+
+In terms of time, **Random forest** performs *poorly* in front of **Decision tree**, in this case, for bigger data sets, we need to use the model according to the need of the problem, in other words *compromise accuracy for speed* or vice-versa.
+
+## Optimization:
+
+| Model | Training Time Complexity | Run Time Complexity |
+:------:|-------------------------:|--------------------:|
+| Decision Tree | $O(nlog(n)d)$   | $O(maximum\ depth\ of\ the\ tree)$ |
+| Random Forest | $O(nlog(n)dk)$   | $O(depth\ of\ tree\ k)$ |
+| Logistic Regression |$O(nd)$     | $O(d)$ |
+
+Where,
+
+- number of instances -> ($n$) 
+
+- number of dimensions -> ($d$)
+
+- number of trees -> ($k$)
+
+Hence, we can **infer** that,
+
+1. If we have large data with low dimensionality, then we should go for **Decision Tree**
+
+2. If we have large number of data with reasonable features, we should use **Random Forest**
+
+3. For low latency applications, we should go with **Logistic Regression**
+
+
+Therefore in our data, **Random Forest** is the most optimized model, since the dataset is large with reasonable features. Along with these, the accuracy obtained and the score metrics is high for random forest in all cases.
+
+
+# Conclusion
+
+In the dataset of cars, we can say that using Random forest in this data is optimized and gives good accuracy. Hence the use of Random forest in place of other is a better choice.
+
+
+
+
+
+
+
