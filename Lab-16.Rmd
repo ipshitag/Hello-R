@@ -1,0 +1,176 @@
+---
+title: "Lab 16"
+authot: Ipshita Ghosh 20122006
+output: pdf_document
+---
+
+# Text Analysis - Sentiment Analysis
+
+```{r}
+# load in the libraries we'll need
+library(tidyverse)
+library(tidytext)
+library(glue)
+library(stringr)
+library(SnowballC)
+library(tm)
+library(twitteR)
+library(syuzhet)
+```
+
+Read the file
+```{r}
+df <- read.csv('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\text_data.csv')
+```
+
+Looking at the file
+```{r}
+glimpse(df)
+```
+
+Looking at the dimension of the data
+```{r}
+length(df)
+```
+```{r}
+dim(df)
+```
+
+Head of the file
+```{r}
+head(df)
+```
+
+Renaming the file
+```{r}
+df <- rename(df, target = X0)
+df <- rename(df, id = X1467810369)
+df <- rename(df, date = Mon.Apr.06.22.19.45.PDT.2009)
+df <- rename(df, query = NO_QUERY)
+df <- rename(df, user = X_TheSpecialOne_)
+df <- rename(df, text = X.switchfoot.http...twitpic.com.2y1zl...Awww..that.s.a.bummer...You.shoulda.got.David.Carr.of.Third.Day.to.do.it...D)
+```
+
+
+```{r}
+head(df)
+```
+
+Cleaning the file
+```{r}
+#Removing hashtag , urls and other special characters
+
+df$text <- gsub("http.*","",df$text)
+
+df$text <- gsub("https.*","",df$text)
+
+df$text <- gsub("#.*","",df$text)
+
+df$text <- gsub("@.*","",df$text)
+
+```
+
+
+More cleaning
+```{r}
+clean_tweets <- function(x) 
+  {
+  x %>%
+  str_remove_all(" ?(f|ht)(tp)(s?)(://)(.*)[.|/](.*)") %>%
+  str_replace_all("&amp;", "and") %>%
+  str_remove_all("[[:punct:]]") %>%
+  str_remove_all("ˆRT:? ") %>%
+  str_remove_all("@[[:alnum:]]+") %>%
+  str_remove_all("#[[:alnum:]]+") %>%
+  str_replace_all("\\\n", " ") %>%
+  str_to_lower() %>%
+  str_trim("both")
+  return (x)
+  }
+# applying the cleaning function to tweet column
+df$text = sapply(df$text, clean_tweets)
+
+```
+
+Getting sentiments
+```{r}
+get_sents = function(tweet)
+  {
+  sent.value = get_sentiment(tweet)
+  return (sent.value)
+  }
+# applying the get_sents function to tweet column
+df$sentiment_score = sapply(df$text, get_sents)
+```
+
+
+Looking at the dataframe
+```{r}
+head(df)
+```
+
+
+Assigning the tweets as positive or negative
+```{r}
+positive.tweets = df[df$sentiment_score > 0,]
+negative.tweets = df[df$sentiment_score < 0,]
+```
+
+
+Assigning sentiment labels to tweets
+```{r}
+to_sent_labels = function(x)
+  {
+  if (x >0)
+    {
+  'positive'
+  }
+  else if (x <0)
+    {
+    'negative'
+    }
+  else
+    {
+'neutral'
+    }
+}
+
+df$sent_labels = sapply(df$sentiment_score , to_sent_labels)
+head(df)
+
+```
+
+```{r}
+print(table(df$sent_labels))
+
+```
+
+Printing the sentiments
+
+```{r}
+library(ggplot2)
+ggplot(data = df, aes(sent_labels)) + geom_bar(fill = 'lightgreen') + theme_light()
+```
+
+# Inference
+
+We can see that most of the tweets are neutral, making up about 65% of the data. Positive and negative tweets are fairly equally divided.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
