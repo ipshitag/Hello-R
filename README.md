@@ -21,3 +21,4 @@ The different R programs in the repository are as follows:-
 | **Decision tree** for classification on *tic-tac-toe endgame* dataset | [CIA 2](https://github.com/ipshitag/Hello-R/blob/master/CIA_2.Rmd) |
 | **Decision tree** and **Random forest** for classification on *adult* dataset | [Lab 15](https://github.com/ipshitag/Hello-R/blob/master/Lab15.Rmd) |
 | **Multi class classification task** using different approach on *car evaluation* | [CAC2](https://github.com/ipshitag/Hello-R/blob/master/CAC2.Rmd) |
+| **Sentiment Analysis** on *Twitter Data* | [Lab 16](https://github.com/ipshitag/Hello-R/blob/master/Lab-16.Rmd) |
