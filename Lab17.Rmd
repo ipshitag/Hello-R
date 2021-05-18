@@ -1,0 +1,150 @@
+---
+title: "Sentiment Analysis in R"
+author: "Ipshita Ghosh 20122006"
+---
+ 
+# Importing Libraries
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(glue)
+library(stringr)
+```
+
+# Get files
+
+```{r}
+files = list.files('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\GutenbergNLP\\gutenberg')
+print(files)
+```
+
+# Get files in the folder
+
+```{r}
+filename = glue('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\GutenbergNLP\\gutenberg\\', files[1])
+head(filename)
+```
+
+```{r}
+filename = trimws(filename)
+head(filename)
+```
+
+```{r}
+filetext = glue(read_file(filename))
+```
+
+Remove $ signs
+
+```{r}
+filetext = gsub("\\$", "", filetext)
+```
+
+
+
+# Tokenization
+
+```{r}
+tokens = tibble(text = filetext) %>%
+unnest_tokens(word, text)
+print(head(tokens))
+```
+
+# Getting Sentiments
+
+```{r}
+sent = tokens %>%
+inner_join(get_sentiments("bing")) %>%
+count(sentiment) %>%
+spread(sentiment, n, fill = 0) %>%
+mutate(sentiment = positive - negative)
+se = as.numeric(sent[1,'sentiment'])
+se
+```
+
+
+```{r}
+GetSentiment = function(file){
+filename = glue('C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab\\GutenbergNLP\\gutenberg\\', file)
+filename = trimws(filename)
+filetext = glue(read_file(filename))
+filetext = gsub("\\$", "", filetext)
+# tokennize
+tokens = tibble(text = filetext) %>%
+unnest_tokens(word, text)
+sentiment = tokens %>%
+inner_join(get_sentiments("bing")) %>%
+count(sentiment) %>%
+spread(sentiment, n, fill = 0) %>%
+mutate(sentiment = positive - negative)
+fin_sent = as.numeric(sentiment['sentiment'])
+return (fin_sent)
+}
+
+```
+
+
+```{r}
+GetSentiment(files[1])
+```
+
+```{r}
+sentiments_frame = data.frame()
+for (i in 1:18){
+sentiments_frame = rbind(sentiments_frame,c(files[i], GetSentiment(files[i])))
+}
+print(sentiments_frame)
+
+```
+
+```{r}
+colnames(sentiments_frame) = c('filename', 'sentiment')
+sentiments_frame
+```
+
+
+```{r}
+to_sentiment = function(x){
+if(x < 0){
+'Negative'
+}else{
+'Positive'
+}
+}
+sentiments_frame$sentmt_text = sapply(sentiments_frame$sentiment, to_sentiment)
+sentiments_frame
+```
+
+
+# Plotting
+
+```{r}
+library(ggplot2)
+ggplot(data = sentiments_frame, aes(sentmt_text)) + geom_bar(fill = 'lightgreen') + theme_minimal()
+```
+
+
+```{r}
+positives = sentiments_frame[sentiments_frame$sentmt_text == 'Positive', ]
+negatives = sentiments_frame[sentiments_frame$sentmt_text == 'Negative', ]
+```
+
+
+```{r}
+ggplot()+theme_minimal()+
+geom_point(data = positives, aes(x = filename, y = sentiment), color = 'red', size = 5)+
+geom_point(data = negatives , aes(x = filename, y = sentiment) , color = 'blue', size = 4)+theme(axis.text.x = element_text(angle = 45, hjust=1))
+```
+
+
+```{r}
+table(sentiments_frame$sentmt_text)
+```
+
+
+
+
+
+
+
