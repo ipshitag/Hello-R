@@ -1,0 +1,86 @@
+
+
+
+```{r}
+library(e1071)
+```
+
+```{r}
+#reproducible
+set.seed(1)
+
+#matrix of 20 by 2 of random numbers
+x=matrix(rnorm (20*2), ncol=2)
+
+#taking 10 values each of -1 and +1
+y=c(rep(-1,10), rep(1,10))
+
+
+x[y==1,]=x[y==1,] + 1
+```
+
+```{r}
+plot(x, col=(3-y))
+```
+```{r}
+dat=data.frame(x=x, y=as.factor(y))
+```
+
+```{r}
+svmfit=svm(y∼., 
+           data=dat , 
+           kernel ="linear", 
+           cost=10,
+           scale=FALSE)
+```
+
+```{r}
+plot(svmfit,dat)
+```
+
+```{r}
+svmfit$index
+```
+
+```{r}
+summary(svmfit)
+```
+```{r}
+set.seed(1)
+tune.out=tune(svm, y∼.,data=dat,
+              kernel ="linear",
+              ranges=list(cost=c(0.001, 0.01, 0.1, 1,5,10,100) ))
+```
+
+
+```{r}
+summary(tune.out)
+```
+
+```{r}
+bestmod=tune.out$best.model
+
+summary(bestmod)
+```
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
