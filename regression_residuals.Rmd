@@ -1,0 +1,162 @@
+# Comparing Logistic and Linear model based on residuals
+
+## Ipshita Ghosh - 20122006
+
+Loading Dataset
+
+```{r}
+setwd("C:\\Users\\Dell\\OneDrive\\College_2nd\\R Lab") 
+df <- read.csv('Admission_Predict.csv')
+```
+
+
+Looking at the head of the raw file
+```{r}
+head(df)
+```
+
+Library for data wrangling
+```{r}
+library(dplyr)
+```
+Data wrangling
+```{r}
+df <- df %>%
+  mutate(Status = case_when(
+    Chance.of.Admit>0.7 ~ 1,
+    Chance.of.Admit<=0.7 ~ 0
+    ))
+```
+
+
+
+# Modelling
+
+
+### Logistic Regression
+
+```{r}
+glm.fit=glm(Status ∼ GRE.Score +  TOEFL.Score + University.Rating + SOP + LOR + CGPA +Research,
+        data=df ,
+        family=binomial )
+```
+
+
+### Linear Regression
+
+```{r}
+lm.fit=lm(Status ∼ GRE.Score +  TOEFL.Score + University.Rating + SOP + LOR + CGPA +Research,
+        data=df)
+```
+
+
+<hr>
+
+# Looking at the residuals one by one
+
+## Residuals vs Fitted
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(glm.fit, which=c(1))
+title("GLM", line = 1.33)
+
+plot(lm.fit, which=c(1))
+title("LM", line = 1.33)
+```
+
+These plots shows the if the residuals have non linear patterns. **We cannot see any distinctive pattern in GLM Plot**, and in the case of the linear model, **we can see a sin function type pattern**.
+This means that the non-linear relationship was not explained by the model and was left out in the residuals, in the linear regression model.
+
+Hence, on the basis of explanation of non linear relationship of the variables, **Logistic model works better**.
+
+
+## Normal Q-Q
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(glm.fit, which=c(2))
+title("GLM", line = 1.33)
+
+plot(lm.fit, which=c(2))
+title("LM", line = 1.33)
+```
+
+This plot shows if the residuals are normally distributed. It’s good if residuals are lined well on the straight dashed line.
+Looking at the plot, we can see the **Linear model is performing well in this case** and the *curve of the logistic model is concerning*.
+
+Hence, in this case, **Linear model performs better**
+
+
+## Scale-Location
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(glm.fit, which=c(3))
+title("GLM", line = 1.33)
+
+plot(lm.fit, which=c(3))
+title("LM", line = 1.33)
+```
+
+This plot shows if residuals are spread equally along the ranges of predictors. This is how we can check the assumption of equal variance (homoscedasticity). It’s good if we see a horizontal line with equally (randomly) spread points.
+
+In both the cases we can see that there is the problem of **heteroscedasticity**
+
+
+##  Residuals vs Leverage
+
+```{r}
+par(mfrow=c(1,2))
+
+plot(glm.fit, which=c(5))
+title("GLM", line = 1.33)
+
+plot(lm.fit, which=c(5))
+title("LM", line = 1.33)
+```
+
+This plot helps us to find influential cases (i.e., subjects) if any. Not all outliers are influential to linear regression. Unlike the other plots, this time patterns are not relevant. We need to see outlying values at the upper right corner or at the lower right corner. Those spots are the places where cases can be influential against a regression line. 
+Values with high Cook’s distance scores, are the cases that are influential to the regression results. The regression results will be altered if we exclude those cases.
+
+In both the cases **there are no such influential points** in the both the cases.
+
+**But in the case of Logistic reegression, we can see the points are clustered at one place because of the point $69, 116\ and\ 264$. Hence in this case we can say that Linear regression is a better fit.**
+
+
+# Conclusion
+
+Hence, looking at the residuals, we can see that, 
+
+1. In case of explaining non linearity of the data, *Logistic regression* works better.
+2. In case of normality of residuals, *Linear regression* works better.
+3. Both the models suffer from heteroscedasticity.
+4. Looking at the points influencing, *Linear Regression* is better.
+
+Therefore, **Linear Regression is the better \*model in this case\***
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
