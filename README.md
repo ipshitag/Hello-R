@@ -25,3 +25,5 @@ The different R programs in the repository are as follows:-
 | **Sentiment Analysis** on *multiple files* | [Lab 17](https://github.com/ipshitag/Hello-R/blob/master/Lab17.Rmd) |
 | **Goodness of model** based on **residual analysis**| [Self](https://github.com/ipshitag/Hello-R/blob/master/regression_residuals.Rmd) |
 
+
+:shipit:
